@@ -17,7 +17,7 @@ use r2d2::Pool;
 use std::env;
 
 use crate::jwt::handler::login_user_handler;
-use crate::routes::{ health_checker_handler, register_app_handler };
+use crate::routes::{ health_checker_handler, register_app_handler, get_all_applications_handler };
 
 pub struct AppState {
     env: Config,
@@ -28,11 +28,11 @@ pub type DbPool = r2d2::Pool<ConnectionManager<PgConnection>>;
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
-    env_logger::init();
-    dotenv().ok();
     if env::var_os("RUST_LOG").is_none() {
         env::set_var("RUST_LOG", "actix_web=info");
     }
+    env_logger::init();
+    dotenv().ok();
 
     let config = Config::init();
     let pool = get_connection_pool();
@@ -51,6 +51,7 @@ async fn main() -> std::io::Result<()> {
             .service(health_checker_handler)
             .service(login_user_handler)
             .service(register_app_handler)
+            .service(get_all_applications_handler)
             .wrap(cors)
             .wrap(Logger::default())
     })

@@ -52,3 +52,10 @@ pub fn insert_new_application(conn: &mut PgConnection, name: String) -> QueryRes
         .expect("Error loading application that was just inserted");
     Ok(application)
 }
+
+pub fn get_all_applications(conn: &mut PgConnection) -> QueryResult<Vec<Application>> {
+    use crate::schema::applications::dsl::*;
+
+    let application = applications.load::<Application>(conn).expect("Error loading applications");
+    Ok(application)
+}
