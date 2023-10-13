@@ -1,5 +1,4 @@
 use actix_web::{
-    post,
     Responder,
     web,
     cookie::{ Cookie, time::Duration as ActixWebDuration },
