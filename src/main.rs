@@ -1,6 +1,8 @@
+mod schema;
 mod config;
 mod model;
 mod jwt;
+
 use std::vec;
 
 use actix_cors::Cors;
@@ -15,6 +17,7 @@ use actix_web::{
     http::header,
 };
 use config::Config;
+use diesel::{ PgConnection, Connection };
 use dotenv::dotenv;
 
 use crate::jwt::handler::login_user_handler;
@@ -29,11 +32,6 @@ async fn health_checker_handler() -> impl Responder {
 
     HttpResponse::Ok().json(serde_json::json!({"status": "success", "message": MESSAGE}))
 }
-
-// fn config(conf: &mut web::ServiceConfig) {
-//     let scope = web::scope("/api").service(health_checker_handler).service(login_user_handler);
-//     conf.service(scope);
-// }
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
@@ -63,4 +61,12 @@ async fn main() -> std::io::Result<()> {
         .bind(("127.0.0.1", 8000))
         .unwrap()
         .run().await
+}
+
+fn establish_connection(database_url: String) -> PgConnection {
+    dotenv().ok();
+
+    PgConnection::establish(&database_url).unwrap_or_else(|_|
+        panic!("Error connecting to {}", database_url)
+    )
 }
