@@ -2,27 +2,22 @@ mod schema;
 mod config;
 mod model;
 mod jwt;
+mod routes;
 
 use actix_cors::Cors;
-use actix_web::{ error, post };
-use actix_web::{
-    Responder,
-    get,
-    HttpResponse,
-    App,
-    middleware::Logger,
-    HttpServer,
-    web,
-    http::header,
-    Result,
-};
+// use actix_web::rt::Runtime;
+use actix_web::{ App, middleware::Logger, HttpServer, web, http::header };
 use config::Config;
 use diesel::PgConnection;
 use diesel::r2d2::ConnectionManager;
+// use diesel::PgConnection;
 use dotenv::dotenv;
-use model::insert_new_application;
+use r2d2::Pool;
+// use deadpool_diesel::postgres::{ Runtime, Manager, Pool };
 use std::env;
+
 use crate::jwt::handler::login_user_handler;
+use crate::routes::{ health_checker_handler, register_app_handler };
 
 pub struct AppState {
     env: Config,
@@ -31,43 +26,16 @@ pub struct AppState {
 
 pub type DbPool = r2d2::Pool<ConnectionManager<PgConnection>>;
 
-#[post("/api/auth/applications/{app_name}")]
-pub async fn register_app_handler(
-    data: web::Data<AppState>,
-    app_name: web::Path<(String,)>
-) -> Result<impl Responder> {
-    let (app_name,) = app_name.into_inner();
-
-    let application = web
-        ::block(move || {
-            let mut conn = data.pool.get().expect("Couldn't get db connection from pool");
-            insert_new_application(&mut conn, app_name)
-        }).await
-        .unwrap()
-        .map_err(error::ErrorInternalServerError)
-        .unwrap();
-    Ok(HttpResponse::Ok().json(application))
-}
-
-#[get("/api/healthchecker")]
-async fn health_checker_handler() -> impl Responder {
-    const MESSAGE: &str = "JWT Authentication in Rust using Actix-web";
-
-    HttpResponse::Ok().json(serde_json::json!({"status": "success", "message": MESSAGE}))
-}
-
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
     env_logger::init();
+    dotenv().ok();
     if env::var_os("RUST_LOG").is_none() {
         env::set_var("RUST_LOG", "actix_web=info");
     }
-    dotenv().ok();
 
-    let database_url = env::var("DATABASE_URL").expect("DATABASE_URL must be set");
-    let manager = ConnectionManager::<PgConnection>::new(database_url);
-    let pool = r2d2::Pool::new(manager).unwrap();
     let config = Config::init();
+    let pool = get_connection_pool();
 
     println!("🚀 Server started successfully");
 
@@ -86,7 +54,13 @@ async fn main() -> std::io::Result<()> {
             .wrap(cors)
             .wrap(Logger::default())
     })
-        .bind(("127.0.0.1", 8000))
+        .bind(("127.0.0.1", 8080))
         .unwrap()
         .run().await
+}
+
+fn get_connection_pool() -> DbPool {
+    let database_url = env::var("DATABASE_URL").expect("DATABASE_URL must be set");
+    let manager = ConnectionManager::<PgConnection>::new(database_url);
+    Pool::builder().test_on_check_out(true).build(manager).expect("Could not build connection pool")
 }
