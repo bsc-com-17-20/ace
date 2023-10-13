@@ -1,3 +1,4 @@
+use chrono::{ DateTime, Utc };
 use diesel::{
     prelude::{ Queryable, Insertable },
     Selectable,
@@ -22,6 +23,23 @@ pub struct TokenClaims {
 pub struct Application {
     pub id: String,
     pub app_name: String,
+}
+
+pub struct User {
+    pub id: String,
+    pub username: String,
+    pub email: String,
+    pub password: String,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+}
+
+pub struct FilteredUser {
+    pub id: String,
+    pub username: String,
+    pub email: String,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
 }
 
 #[derive(Debug, Insertable)]
