@@ -48,6 +48,12 @@ pub struct FilteredUser {
     pub updated_at: DateTime<Utc>,
 }
 
+#[derive(Debug, Deserialize, Clone)]
+pub struct LoginUserSchema {
+    pub username: String,
+    pub password: String,
+}
+
 pub struct NewUser<'a> {
     username: &'a str,
     email: &'a str,
@@ -86,6 +92,27 @@ pub fn insert_new_user(
         .expect("Error loading user that was just inserted");
 
     Ok(usr)
+}
+
+pub fn filter_user_record(user: &User) -> FilteredUser {
+    FilteredUser {
+        id: user.id.clone(),
+        username: user.username.clone(),
+        email: user.email.clone(),
+        created_at: user.created_at,
+        updated_at: user.updated_at,
+    }
+}
+
+pub fn find_user_record(conn: &mut PgConnection, user_id: String) -> QueryResult<User> {
+    use crate::schema::users::dsl::*;
+
+    let user = users
+        .filter(username.eq(&user_id))
+        .first::<User>(conn)
+        .expect("Error loading user that was just inserted");
+
+    Ok(user)
 }
 
 #[derive(Debug, Insertable)]
