@@ -54,17 +54,18 @@ pub struct LoginUserSchema {
     pub password: String,
 }
 
-pub struct NewUser<'a> {
-    username: &'a str,
-    email: &'a str,
-    password: &'a str,
+#[derive(Debug, Deserialize)]
+pub struct NewUserSchema {
+    username: String,
+    email: String,
+    password: String,
 }
 
 pub fn insert_new_user(
     conn: &mut PgConnection,
-    user: NewUser,
+    user: NewUserSchema,
     app_id: String
-) -> QueryResult<User> {
+) -> QueryResult<FilteredUser> {
     use crate::schema::users::dsl::*;
 
     let uid = format!("{}", uuid::Uuid::new_v4());
@@ -91,7 +92,8 @@ pub fn insert_new_user(
         .first::<User>(conn)
         .expect("Error loading user that was just inserted");
 
-    Ok(usr)
+    let filtered_user = filter_user_record(&usr);
+    Ok(filtered_user)
 }
 
 pub fn filter_user_record(user: &User) -> FilteredUser {

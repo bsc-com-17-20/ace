@@ -1,6 +1,9 @@
 use actix_web::{ get, Responder, HttpResponse, post, web, error, Result };
 
-use crate::{ AppState, model::{ insert_new_application, get_all_applications } };
+use crate::{
+    AppState,
+    model::{ insert_new_application, get_all_applications, NewUserSchema, insert_new_user },
+};
 
 #[get("/api/healthchecker")]
 pub async fn health_checker_handler() -> impl Responder {
@@ -39,4 +42,24 @@ pub async fn register_app_handler(
         .map_err(error::ErrorInternalServerError)
         .unwrap();
     Ok(HttpResponse::Ok().json(application))
+}
+
+#[post("api/auth/users/{app_id}")]
+pub async fn insert_user_handler(
+    data: web::Data<AppState>,
+    body: web::Json<NewUserSchema>,
+    app_id: web::Path<(String,)>
+) -> Result<impl Responder> {
+    let (app_id,) = app_id.into_inner();
+    let new_user = body.into_inner();
+
+    let user = web
+        ::block(move || {
+            let mut conn = data.pool.get().expect("Couldn't get db connection from pool");
+            insert_new_user(&mut conn, new_user, app_id)
+        }).await
+        .unwrap()
+        .map_err(error::ErrorInternalServerError)
+        .unwrap();
+    Ok(HttpResponse::Ok().json(user))
 }
