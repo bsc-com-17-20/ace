@@ -12,7 +12,7 @@ diesel::table! {
         id -> Varchar,
         username -> Varchar,
         email -> Varchar,
-        pass_word -> Varchar,
+        password -> Varchar,
         created_at -> Timestamptz,
         updated_at -> Timestamptz,
         application_id -> Varchar,

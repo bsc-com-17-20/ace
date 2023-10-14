@@ -1,6 +1,7 @@
+use argon2::{ password_hash::{ SaltString, rand_core::OsRng }, Argon2, PasswordHasher };
 use chrono::{ DateTime, Utc };
 use diesel::{
-    prelude::{ Queryable, Insertable },
+    prelude::{ Queryable, Insertable, Identifiable },
     Selectable,
     PgConnection,
     QueryResult,
@@ -25,6 +26,9 @@ pub struct Application {
     pub app_name: String,
 }
 
+#[derive(Debug, Queryable, Identifiable, Selectable, Insertable, PartialEq)]
+#[diesel(belongs_to(Application))]
+#[diesel(table_name = crate::schema::users)]
 pub struct User {
     pub id: String,
     pub username: String,
@@ -32,14 +36,56 @@ pub struct User {
     pub password: String,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
+    pub application_id: String,
 }
 
+#[derive(Debug, Serialize)]
 pub struct FilteredUser {
     pub id: String,
     pub username: String,
     pub email: String,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
+}
+
+pub struct NewUser<'a> {
+    username: &'a str,
+    email: &'a str,
+    password: &'a str,
+}
+
+pub fn insert_new_user(
+    conn: &mut PgConnection,
+    user: NewUser,
+    app_id: String
+) -> QueryResult<User> {
+    use crate::schema::users::dsl::*;
+
+    let uid = format!("{}", uuid::Uuid::new_v4());
+    let salt = SaltString::generate(&mut OsRng);
+    let hased_password = Argon2::default()
+        .hash_password(user.password.as_bytes(), &salt)
+        .expect("Error while hashing password")
+        .to_string();
+
+    let new_user = User {
+        id: uid.clone(),
+        username: user.username.to_string(),
+        email: user.email.to_string(),
+        password: hased_password,
+        created_at: Utc::now(),
+        updated_at: Utc::now(),
+        application_id: app_id,
+    };
+
+    diesel::insert_into(users).values(&new_user).execute(conn).expect("Error inserting user");
+
+    let usr = users
+        .filter(id.eq(&uid))
+        .first::<User>(conn)
+        .expect("Error loading user that was just inserted");
+
+    Ok(usr)
 }
 
 #[derive(Debug, Insertable)]
