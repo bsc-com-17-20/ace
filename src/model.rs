@@ -106,6 +106,25 @@ pub fn filter_user_record(user: &User) -> FilteredUser {
     }
 }
 
+pub fn find_all_user_records(
+    conn: &mut PgConnection,
+    app_id: String
+) -> QueryResult<Vec<FilteredUser>> {
+    use crate::schema::users::dsl::*;
+
+    let usrs: Vec<User> = users
+        .filter(application_id.eq(&app_id))
+        .load::<User>(conn)
+        .expect("Error loading users");
+
+    let mut filtered_users: Vec<FilteredUser> = Vec::new();
+    for user in usrs.iter() {
+        let filtered_user = filter_user_record(user);
+        filtered_users.push(filtered_user);
+    }
+    Ok(filtered_users)
+}
+
 pub fn find_user_record(conn: &mut PgConnection, user_id: String) -> QueryResult<User> {
     use crate::schema::users::dsl::*;
 

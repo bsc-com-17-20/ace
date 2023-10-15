@@ -2,7 +2,13 @@ use actix_web::{ get, Responder, HttpResponse, post, web, error, Result };
 
 use crate::{
     AppState,
-    model::{ insert_new_application, get_all_applications, NewUserSchema, insert_new_user },
+    model::{
+        insert_new_application,
+        get_all_applications,
+        NewUserSchema,
+        insert_new_user,
+        find_all_user_records,
+    },
 };
 
 #[get("/api/healthchecker")]
@@ -62,4 +68,25 @@ pub async fn insert_user_handler(
         .map_err(error::ErrorInternalServerError)
         .unwrap();
     Ok(HttpResponse::Ok().json(user))
+}
+
+#[get("api/auth/users/{app_id}")]
+pub async fn find_all_user_records_handler(
+    data: web::Data<AppState>,
+    app_id: web::Path<(String,)>
+) -> Result<impl Responder> {
+    let (app_id,) = app_id.into_inner();
+
+    let users = web
+        ::block(move || {
+            let mut conn = data.pool.get().expect("Couldn't get db connection from pool");
+            find_all_user_records(&mut conn, app_id)
+        }).await
+        .unwrap()
+        .map_err(error::ErrorInternalServerError)
+        .unwrap();
+
+    let json = serde_json::to_string(&users).unwrap();
+
+    Ok(web::Json(json))
 }

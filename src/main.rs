@@ -17,7 +17,13 @@ use r2d2::Pool;
 use std::env;
 
 use crate::jwt::handler::login_user_handler;
-use crate::routes::{ health_checker_handler, register_app_handler, get_all_applications_handler };
+use crate::routes::{
+    health_checker_handler,
+    register_app_handler,
+    get_all_applications_handler,
+    insert_user_handler,
+    find_all_user_records_handler,
+};
 
 pub struct AppState {
     env: Config,
@@ -52,6 +58,8 @@ async fn main() -> std::io::Result<()> {
             .service(login_user_handler)
             .service(register_app_handler)
             .service(get_all_applications_handler)
+            .service(insert_user_handler)
+            .service(find_all_user_records_handler)
             .wrap(cors)
             .wrap(Logger::default())
     })
